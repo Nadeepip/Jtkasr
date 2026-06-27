@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بازی کسرها</title>
+<script src="supabase.js" defer></script>
+<script src="game-db.js" defer></script>
+<style>
+  @font-face {
+    font-family: 'Vazirmatn';
+    src: url('Vazirmatn-Regular.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Vazirmatn';
+    src: url('Vazirmatn-Bold.woff2') format('woff2');
+    font-weight: bold;
+    font-style: normal;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Vazirmatn',Tahoma,sans-serif}
+  body{background:linear-gradient(135deg,#a1c4fd,#c2e9fb);min-height:100vh;display:flex;flex-direction:column;padding:10px 5px;overflow-y:auto;position:relative}
+
+  .hidden { display: none !important; }
+  .screen { display: none !important; }
+  .screen.active { display: flex !important; }
+
+  .container{background:#fff;padding:15px;border-radius:15px;box-shadow:0 8px 25px rgba(0,0,0,.1);max-width:600px;width:100%;margin:5px auto;flex:1;display:flex;flex-direction:column;position:relative;z-index:10}
+
+  h1{color:#2c3e50;margin-bottom:8px;font-size:1.2rem;text-align:center}
+  .school{font-size:0.8rem;color:#7f8c8d;margin-bottom:10px;text-align:center}
+  .profile{display:flex;justify-content:space-around;background:#f8f9fa;padding:8px;border-radius:10px;margin-bottom:10px;font-size:0.8rem;flex-wrap:wrap;gap:5px}
+  .profile-item{display:flex;align-items:center;gap:4px;font-weight:bold;color:#2c3e50}
+
+  #gameArea {
+      position: relative;
+      min-height: 100px; 
+      margin: 10px 0;
+  }
+
+  .math-line {
+      display: flex;
+      flex-direction: row; 
+      justify-content: flex-start;
+      align-items: center;
+      gap: 4px;
+      font-size: 1.2rem;
+      white-space: nowrap;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 40px; 
+      padding-top: 40px;    
+      padding-left: 10px;
+      padding-right: 10px;
+      direction: ltr; 
+  }
+
+  #arrowLayer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 5;
+  }
+
+  .fraction {
+      display:inline-flex;
+      flex-direction:column;
+      align-items:center;
+      vertical-align: middle;
+      font-weight:bold;
+      margin: 0 4px;
+      position: relative;
+      z-index: 10;
+  }
+
+  .fraction .num, .fraction .den {
+      padding: 1px 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      min-height: 24px;
+      position: relative; 
+  }
+
+  .fraction-line {
+      height: 2px;
+      background: #000;
+      width: 100%;
+      min-width: 20px;
+      margin: 1px 0;
+  }
+
+  .mul-text {
+      font-size: 0.75rem;
+      color: #e74c3c;
+      margin-left: 3px;
+      font-weight: normal;
+      display: inline-block;
+  }
+
+  .operator, .equals {
+      font-weight: bold;
+      font-size: 1.3rem;
+      margin: 0 4px;
+      color: #2c3e50;
+      z-index: 10;
+  }
+  .operator { color: #e74c3c; }
+
+  .fraction-input {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      margin: 0 2px;
+      z-index: 10;
+  }
+
+  .fraction-input input {
+      width: 38px; 
+      height: 30px;
+      padding: 2px;
+      font-size: 1.1rem;
+      text-align: center;
+      border: 2px solid #bdc3c7;
+      border-radius: 6px;
+      font-family: inherit;
+      background: #fff;
+      direction: ltr;
+  }
+
+  .fraction-input input:focus { border-color: #3498db; outline: none; }
+  .fraction-input input.correct-box { border-color: #27ae60; background-color: #e6ffe6; color: #27ae60; font-weight: bold; } 
+  .fraction-input input.wrong-box { border-color: #e74c3c; background-color: #ffe6e6; } 
+
+  .fraction-input input:first-child { order: 1; margin-bottom: 2px; }
+  .fraction-input .fraction-line { order: 2; width: 100%; background: #bdc3c7; }
+  .fraction-input input:last-child { order: 3; margin-top: 2px; }
+
+  .color-blue .num, .color-blue .den { color: #2980b9 !important; }
+  .color-blue .fraction-line { background-color: #2980b9 !important; }
+
+  .color-green .num, .color-green .den { color: #27ae60 !important; }
+  .color-green .fraction-line { background-color: #27ae60 !important; }
+
+  .current-stage{font-size:1rem;color:#e67e22;margin:5px 0;text-align:center;font-weight:bold}
+  .result{margin-top:5px;font-size:1.1rem;font-weight:bold;min-height:25px;text-align:center}
+  .correct{color:#27ae60}
+  .wrong{color:#e74c3c}
+  .visual-help{margin-top:10px;padding:5px;background:#f8f9fa;border-radius:10px;display:none;text-align:center}
+  .rect-container{display:flex;justify-content:center;margin:5px 0}
+  .rect{display:flex;border:2px solid #333;border-radius:6px;overflow:hidden;width:fit-content;max-width:100%}
+  .part{width:25px;height:40px;border-right:1px solid #555;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;font-size:0.9rem}
+  .part:not(:last-child){border-right:1px solid #555 !important}
+  .blue{background:#3498db}
+  .red{background:#e74c3c}
+
+  .controls{
+      display:flex;
+      gap:8px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-top: 15px; 
+      width: 100%;
+  }
+  .controls button{
+      flex:1;
+      min-width: 100px;
+      max-width:150px;
+      padding:12px 12px;
+      font-size:1rem;
+      border-radius:12px;
+      border: none; 
+      cursor: pointer; 
+      color: white; 
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  #check { background: #3498db; }
+  #showAnswer { background: #f39c12; }
+  #next { background: #2ecc71; }
+  #next:disabled { background: #95a5a6; cursor: not-allowed; box-shadow: none; }
+
+  .flower{position:absolute;font-size:1.8rem;pointer-events:none;animation:fall 3s linear forwards;z-index:9999}
+  @keyframes fall{to{transform:translateY(120vh) rotate(720deg);opacity:0}}
+
+  .report,.register{line-height:1.8;text-align:right}
+  .report h3,.register h2{text-align:center;color:#2c3e50;margin-bottom:12px;font-size:1.2rem}
+  .register p{margin:10px 0;text-align:center;font-size:0.9rem;color:#555}
+  .register input{width:100%;max-width:250px;padding:10px;font-size:1rem;margin:10px auto;border:2px solid #ddd;border-radius:10px;display:block}
+  .report-buttons{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center}
+  .report-buttons button {
+      padding: 12px 20px; 
+      border-radius: 10px; 
+      border: none; 
+      cursor: pointer; 
+      color: white; 
+      font-weight: bold;
+      font-size: 1rem;
+  }
+  #sendReport:disabled { background: #95a5a6 !important; cursor: default; }
+</style>
+</head>
+<body>
+
+<div id="Screen-Loading" style="display:none; background:linear-gradient(135deg,#a1c4fd,#c2e9fb); position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;">
+    <div style="font-size: 3.5rem; margin-bottom: 15px;">🐰</div>
+    <h1 style="color:#2c3e50; font-size:24pt; margin-bottom:30px; font-weight: bold;">بازی کسرها</h1>
+    <div style="background:#e0e0e0; border-radius:12px; height:18px; width:80%; max-width:400px; overflow:hidden; margin-bottom:18px; border:2px solid #2c3e50; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+        <div id="portal-loading-bar" style="background: linear-gradient(90deg, #ff007f, #aa00ff, #00b0ff); width:0%; height:100%; transition:width 0.3s ease; box-shadow: 0 0 10px rgba(170,0,255,0.5);"></div>
+    </div>
+    <p id="portal-loading-text" style="font-size:13pt; color:#2c3e50; font-weight:bold;"></p>
+</div>
+
+<div class="container register screen" id="screen-register">
+    <h2 id="portal-school-title">ثبت‌نام در بازی</h2>
+    <div id="portal-welcome-section">
+      <div class="welcome" id="portal-student-welcome">خوش آمدی دوست کوچولو!</div>
+      <p class="motivation">بیا با هم کسرها رو یاد بگیریم و ستاره بگیریم!</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 10px; background: #f8f9fa; border-radius: 10px; padding: 15px; border: 1px dashed #bdc3c7; margin: 15px auto; text-align: right; direction: rtl; font-size: 1rem; width: 100%; max-width: 280px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>👤 نام دانش‌آموز:</span>
+            <span id="portal-student-name" style="font-weight:bold; color:#2c3e50;">---</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🎮 تعداد بازی‌های قبلی:</span>
+            <span id="portal-prev-plays" style="font-weight:bold; color:#e67e22;">۰</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>⭐ ستاره‌های ثبت‌شده:</span>
+            <span id="portal-prev-stars" style="font-weight:bold; color:#f39c12;">۰ ⭐</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; color:#27ae60; border-top:1px dashed #bdc3c7; padding-top:8px; margin-top:5px;">
+            <span>🎯 ستاره مورد نیاز تکلیف:</span>
+            <span id="portal-req-stars">۰ ⭐</span>
+          </div>
+      </div>
+    </div>
+    <button id="startGame" style="background:#e67e22; color:white; padding:10px 20px; border:none; border-radius:10px; cursor:pointer; width:100%; max-width:250px; display:block; margin:0 auto; font-family: inherit; font-weight: bold; font-size: 1.1rem;">شروع بازی تکلیف 🎮</button>
+    
+    <div id="portal-error-section" style="display:none; text-align:center; padding:20px; max-width: 450px; margin: 20px auto; background: white; border-radius: 12px; box-shadow:0 6px 18px rgba(0,0,0,0.12);">
+        <div style="font-size:2.5rem; margin-bottom:10px;">⚠️</div>
+        <h3 id="portal-error-title" style="color:#d32f2f; margin-bottom:8px; font-weight:bold; font-size:15pt;">خطا در اتصال به پرتال کلاس</h3>
+        <p id="portal-error-desc" style="color:#555; font-size:12pt; margin-bottom:15px; line-height:1.6;">جهت بارگذاری مشخصات و تکالیفت، اتصال به اینترنت الزامی است. لطفا شبکه‌ات را بررسی کن و مجدداً تلاش کن.</p>
+        <button id="portal-retry-auth-btn" class="btn-start" style="background:#1e90ff; color: white; padding: 10px 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;" onclick="retryAuthentication()">🔄 تلاش مجدد برای اتصال</button>
+    </div>
+</div>
+
+<div id="screen-assistant" class="screen">
+  <div class="container" style="max-width: 450px;">
+    <h2 style="color: #2c3e50; margin-bottom: 20px; font-size: 1.5rem;">🌟 دستیار ثبت ستاره 🌟</h2>
+    <div style="background: #fff; border: 2px dashed #3498db; border-radius: 12px; padding: 20px; margin-bottom: 25px; line-height: 1.8; text-align: justify; direction: rtl;">
+        <span style="font-size: 14pt; font-weight: bold; color: #2c3e50; display: block; margin-bottom: 10px;" id="ast-welcome">سلام قهرمان!</span>
+        <p style="font-size: 11pt; color: #333; margin: 0;">
+            بازی قبلی‌ات با موفقیت تمام شده بود، اما به خاطر قطع شدن اینترنت، ستاره‌ی طلایی‌ات به دفتر کلاسی معلم نرسیده بود. 
+            اصلاً نگران نباش! نیازی به بازی دوباره نیست. دکمه زیر را بزن تا ستاره‌ات ثبت بشه و کارنامه‌ات رو ببینی. 😊
+        </p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; background: #f8f9fa; border: 1px solid #bdc3c7; border-radius: 10px; padding: 15px; margin-bottom: 25px; text-align: right; direction: rtl; font-size:12pt;">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><span>👤 نام دانش‌آموز:</span><span id="ast-name" style="font-weight:bold; color:#2c3e50;">---</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;"><span>⭐ ستاره‌های ثبت‌شده قبلی:</span><span id="ast-stars" style="font-weight:bold; color:#f39c12;">۰ ⭐</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;"><span>🎯 ستاره هدف تکلیف:</span><span id="ast-req-stars" style="font-weight:bold; color:#27ae60;">۰ ⭐</span></div>
+    </div>
+    <button style="width: 100%; height: 50px; background: #2ecc71; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size:13pt; font-family: inherit;" onclick="submitAssistantStar()">🌟 ثبت ستاره‌ی طلایی من و دریافت کارنامه</button>
+  </div>
+</div>
+
+<div class="container screen" id="screen-game">
+    <h1>بازی جمع و تفریق کسرها</h1>
+    <div class="school" id="schoolName"></div>
+    <div class="profile" id="profile">
+        <div class="profile-item"><span id="playerName"></span></div>
+        <div class="profile-item"><span id="totalGames"></span></div>
+        <div class="profile-item"><span id="totalStars"></span></div>
+    </div>
+    <div class="current-stage">مرحله <span id="currentStageNum">1</span> از 10</div>
+    
+    <div id="gameArea">
+        <svg id="arrowLayer"></svg>
+        <div id="mathContent" class="math-line"></div>
+    </div>
+    
+    <div class="result" id="result"></div>
+    <div class="visual-help" id="visualHelp"></div>
+
+    <div class="controls">
+        <button id="check">بررسی</button>
+        <button id="showAnswer" style="display:none;">نمایش جواب</button>
+        <button id="next" disabled>مرحله بعدی</button>
+    </div>
+</div>
+
+<div id="portal-submitting-screen" class="screen">
+  <div class="container" style="max-width: 450px;">
+    <h3 id="portal-progress-title" style="color:#2c3e50; margin-bottom:15px; font-weight:bold; font-size:16pt;">⏳ در حال ارسال نتایج به دیتابیس کلاس...</h3>
+    <div style="background:#eee; border-radius:10px; height:20px; width:100%; overflow:hidden; margin-bottom:15px; border:1px solid #ccc;">
+        <div id="portal-progress-bar" style="background:linear-gradient(90deg, #ff007f, #aa00ff, #00b0ff); width:0%; height:100%; transition:width 0.2s;"></div>
+    </div>
+    <p id="portal-submit-status-text" style="font-size:12pt; color:#555; font-weight:bold; line-height:1.6; direction:rtl;"></p>
+    <button id="portal-retry-submit-btn" style="display:none; margin:15px auto 0; background:#e74c3c; color: white; padding: 10px 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;" onclick="retrySubmission()">🔄 تلاش مجدد برای ارسال</button>
+  </div>
+</div>
+
+<div class="container screen" id="screen-report">
+    <div class="report">
+        <h3>گزارش بازی</h3>
+        <div id="report-content" class="report-details"></div>
+    </div>
+    
+    <div id="portal-submit-badge" style="display:none; background:#ffe4e1; border:1px solid #e67e22; color:#d35400; padding:15px; border-radius:12px; margin-bottom:12px; font-weight:bold; font-size:12.5pt; line-height:1.6; text-align:right; width: 100%;"></div>
+
+    <div id="portal-goal-reached-badge" style="display:none; background:#e8f5e9; border:2px solid #2e7d32; color:#1b5e20; padding:15px; border-radius:12px; margin-bottom:15px; font-weight:bold; font-size:12.5pt; line-height:1.6; direction:rtl; text-align:right; width: 100%;">
+        🎉 هوراااا قهرمان پرتلاش! هدف تکلیف رو کاملاً ترکوندی و همه‌ی ستاره‌های مورد نیاز رو گرفتی! تو فوق‌العاده‌ای! 🥇 حالا می‌تونی با خیال راحت به پرتال برگردی. خداقوت! ❤️
+    </div>
+
+    <div id="portal-back-instruction" style="display:none; width: 100%;"></div>
+
+    <div class="report-buttons" id="normal-report-buttons">
+        <button id="sendReport" style="background:#25D366;">ارسال در واتساپ</button>
+        <button id="playAgain" style="background:#34495e;">بازی دوباره</button>
+    </div>
+</div>
+
+<script>
+let STORAGE = 'FR_KASR4_FINAL_V9_playerState';
+let GAME_STATE_STORAGE = 'FR_KASR4_FINAL_V9_gameState';
+
+const schoolName="دبستان معاد خرگوشی", teacherPhone="+989392291209", totalQuestions=10;
+
+const stages=[
+    {step:1,op:'+',type:'same',showShape:true},
+    {step:2,op:'−',type:'same',showShape:true},
+    {step:3,op:'+',type:'same',showShape:false},
+    {step:4,op:'−',type:'same',showShape:false},
+    {step:5,op:'+',type:'same',showShape:false},
+    {step:6,op:'−',type:'same',showShape:false},
+    {step:7,op:'+',type:'diff',showShape:false},
+    {step:8,op:'−',type:'diff',showShape:false},
+    {step:9,op:'+',type:'diff',showShape:false},
+    {step:10,op:'−',type:'diff',showShape:false}
+];
+
+const registerPage=document.getElementById('screen-register'),gamePage=document.getElementById('screen-game'),reportPage=document.getElementById('screen-report'),
+nameInput=document.getElementById('nameInput'),startGameBtn=document.getElementById('startGame'),playerNameEl=document.getElementById('playerName'),
+totalGamesEl=document.getElementById('totalGames'),totalStarsEl=document.getElementById('totalStars'),currentStageNum=document.getElementById('currentStageNum'),
+mathContent=document.getElementById('mathContent'), arrowLayer=document.getElementById('arrowLayer'),
+checkBtn=document.getElementById('check'),showAnswerBtn=document.getElementById('showAnswer'),nextBtn=document.getElementById('next'),
+resultEl=document.getElementById('result'),visualHelp=document.getElementById('visualHelp'),schoolEl=document.getElementById('schoolName'),
+sendReportBtn = document.getElementById('sendReport');
+
+let playerData={name:'',totalGames:0,totalStars:0, reportSent: false}, 
+    currentStage=0, 
+    stageCompleted=false, isRetryMode=false,
+    f1,f2,op,commonDen,correctEquiv1,correctEquiv2,correctRawNum,correctRawDen, multiplier1, multiplier2;
+
+function persianToEnglish(s){
+    if(!s) return 0;
+    const p=['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+    return parseInt(s.toString().split('').map(c=>p.indexOf(c)!==-1?p.indexOf(c):c).join(''))||0;
+}
+function toPersian(n){
+    if(n === undefined || n === null) return '';
+    const p=['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+    return n.toString().split('').map(d => /[0-9]/.test(d) ? p[parseInt(d)] : d).join('');
+}
+
+function showScreen(id) {
+    const screens = ['screen-register', 'screen-game', 'screen-report', 'screen-assistant', 'portal-submitting-screen'];
+    screens.forEach(s => {
+        const el = document.getElementById(s);
+        if (el) {
+            el.classList.remove('active');
+            el.classList.add('hidden');
+            el.style.display = '';
+        }
+    });
+    const target = document.getElementById(id);
+    if (target) {
+        target.classList.remove('hidden');
+        target.classList.add('active');
+        target.style.display = '';
+    }
+}
+
+document.addEventListener('focusin', function(e) {
+    if(e.target.tagName === 'INPUT' && e.target.classList.contains('wrong-box')){
+        e.target.value = '';
+        e.target.classList.remove('wrong-box');
+    }
+});
+document.addEventListener('click', function(e) {
+    if(e.target.tagName === 'INPUT' && e.target.classList.contains('wrong-box')){
+        e.target.value = '';
+        e.target.classList.remove('wrong-box');
+    }
+});
+
+document.addEventListener('input', function(e) {
+    if(e.target.tagName === 'INPUT' && e.target.type === 'tel'){
+        const val = e.target.value;
+        const persianVal = toPersian(val.replace(/[0-9]/g, d => d));
+        if(val !== persianVal) e.target.value = persianVal;
+        
+        if(e.target.classList.contains('wrong-box')){
+            e.target.classList.remove('wrong-box');
+        }
+    }
+});
+
+function displayFraction(f, cssClass='', ids={num:'', den:''}, multiplier=null){
+    let numContent = toPersian(f.num);
+    let denContent = toPersian(f.den);
+    
+    if(multiplier && multiplier > 1){
+        numContent += `<span class="mul-text">×${toPersian(multiplier)}</span>`;
+        denContent += `<span class="mul-text">×${toPersian(multiplier)}</span>`;
+    }
+
+    return `<div class="fraction ${cssClass}">
+                <div class="num" ${ids.num ? `id="${ids.num}"` : ''}>${numContent}</div>
+                <div class="fraction-line"></div>
+                <div class="den" ${ids.den ? `id="${ids.den}"` : ''}>${denContent}</div>
+            </div>`;
+}
+
+function displayFractionInput(idPrefix){
+    return `<div class="fraction-input" id="${idPrefix}_wrapper">
+                <input type="tel" id="${idPrefix}Num" placeholder="؟" autocomplete="off">
+                <div class="fraction-line"></div>
+                <input type="tel" id="${idPrefix}Den" placeholder="؟" autocomplete="off">
+            </div>`;
+}
+
+function loadData(){
+  const playerState = localStorage.getItem(STORAGE);
+  if(playerState){
+    try {
+      playerData = JSON.parse(playerState);
+      if (typeof playerData.reportSent === 'undefined') playerData.reportSent = false;
+    } catch(e){}
+  }
+}
+
+function saveData(){
+    localStorage.setItem(STORAGE, JSON.stringify(playerData));
+    saveGameState();
+}
+
+function saveGameState() {
+    localStorage.setItem(GAME_STATE_STORAGE, JSON.stringify({
+        currentStage: currentStage
+    }));
+}
+
+function loadState() {
+    const saved = localStorage.getItem(GAME_STATE_STORAGE);
+    if (saved) {
+        try {
+            const d = JSON.parse(saved);
+            currentStage = d.currentStage;
+        } catch (e) {}
+    }
+}
+
+function clearGameState() {
+    localStorage.removeItem(GAME_STATE_STORAGE);
+}
+
+function checkSavedUnfinishedState() {
+    try {
+        const saved = localStorage.getItem(GAME_STATE_STORAGE);
+        if (saved) {
+            const d = JSON.parse(saved);
+            if (d && d.currentStage !== undefined && d.currentStage < totalQuestions) return d;
+        }
+    } catch (e) {}
+    return null;
+}
+
+function updateProfile(){
+  schoolEl.textContent=schoolName;
+  playerNameEl.textContent=playerData.name;
+  totalGamesEl.innerHTML = toPersian(playerData.totalGames) + ' <span style="font-size:1.2em;">🎮</span>';
+  totalStarsEl.innerHTML = toPersian(playerData.totalStars) + ' <span style="font-size:1.2em;">⭐</span>';
+}
+
+startGameBtn.onclick = () => {
+  currentStage = 0;
+  stageCompleted = false;
+  isRetryMode = false;
+  const activeState = checkSavedUnfinishedState();
+  if (activeState) {
+      loadState();
+  } else {
+      currentStage = 0;
+      saveGameState();
+  }
+  saveData();
+  showScreen('screen-game');
+  startNewGame();
+};
+
+function showGamePage(){
+  if(currentStage >= totalQuestions && playerData.name){
+      showScreen('screen-report');
+      renderReport(playerData.totalStars >= Portal.requiredStars, playerData.totalStars);
+  } else {
+      showScreen('screen-game');
+      startNewGame();
+  }
+  updateProfile();
+}
+
+function startNewGame(){ nextQuestion(); }
+function gcd(a,b){return b?gcd(b,a%b):a}
+function simplify(n,d){if(d===0)return{n:0,d:1};const g=gcd(Math.abs(n),Math.abs(d));return{n:n/g,d:d/g}}
+
+function nextQuestion(){
+  if(currentStage >= totalQuestions){endGame();return}
+  saveData();
+  stageCompleted = false;
+  isRetryMode = false;
+  
+  const stage = stages[currentStage];
+  op = stage.op;
+  const isSame = stage.type === 'same';
+  
+  visualHelp.style.display = 'none';
+  showAnswerBtn.style.display = 'none';
+  showAnswerBtn.textContent = 'نمایش جواب'; 
+  showAnswerBtn.style.background = '#f39c12';
+  arrowLayer.innerHTML = ''; 
+  
+  resultEl.textContent = '';
+  resultEl.className = 'result';
+  nextBtn.disabled = true;
+  checkBtn.disabled = false;
+  currentStageNum.textContent = toPersian(currentStage + 1);
+
+  if(isSame){
+    const den = Math.floor(Math.random()*6)+5;
+    let f1Num, f2Num;
+    if(op === '+'){
+      do{
+        f1Num = Math.floor(Math.random()*(den-1))+1;
+        f2Num = Math.floor(Math.random()*(den-1))+1;
+      }while(f1Num + f2Num >= den || f1Num + f2Num <= 1); 
+    }else{
+      do{
+        f1Num = Math.floor(Math.random()*(den-1))+1;
+        f2Num = Math.floor(Math.random()*f1Num)+1;
+      }while(f1Num === f2Num);
+    }
+    f1 = {num: f1Num, den};
+    f2 = {num: f2Num, den};
+    correctRawNum = op === '+' ? f1.num + f2.num : f1.num - f2.num;
+    correctRawDen = den;
+    
+    let html = displayFraction(f1) + `<span class="operator">${op}</span>` + displayFraction(f2) + `<span class="equals">=</span>`;
+    html += displayFractionInput('ans');
+    mathContent.innerHTML = html;
+    if(stage.showShape) showRectangle();
+
+  } else {
+    let valid = false;
+    while(!valid){
+      const factor = [2,3,4][Math.floor(Math.random()*3)], smallDen = Math.floor(Math.random()*4)+2, largeDen = smallDen*factor, wich = Math.random()<0.5;
+      f1 = wich ? {num: Math.floor(Math.random()*(smallDen-1))+1, den: smallDen} : {num: Math.floor(Math.random()*(largeDen-1))+1, den: largeDen};
+      f2 = wich ? {num: Math.floor(Math.random()*(largeDen-1))+1, den: largeDen} : {num: Math.floor(Math.random()*(smallDen-1))+1, den: smallDen};
+      if(op==='−' && f1.num*(largeDen/f1.den) < f2.num*(largeDen/f2.den)) [f1,f2] = [f2,f1];
+      commonDen = largeDen;
+      multiplier1 = commonDen/f1.den;
+      multiplier2 = commonDen/f2.den;
+      const eq1n = f1.num*multiplier1, eq2n = f2.num*multiplier2, finalNum = op==='+' ? eq1n+eq2n : eq1n-eq2n;
+      if(op==='+' && finalNum >= commonDen) continue;
+      if(op==='−' && finalNum < 0) continue;
+      
+      correctEquiv1 = {n: eq1n, d: commonDen};
+      correctEquiv2 = {n: eq2n, d: commonDen};
+      correctRawNum = finalNum;
+      correctRawDen = commonDen;
+      valid = true;
+    }
+    
+    let html = displayFraction(f1, '', {num:'src_f1_n', den:'src_f1_d'}) + 
+               `<span class="operator">${op}</span>` + 
+               displayFraction(f2, '', {num:'src_f2_n', den:'src_f2_d'}) + 
+               `<span class="equals">=</span>`;
+    html += displayFractionInput('eq1');
+    html += `<span class="operator">${op}</span>`;
+    html += displayFractionInput('eq2');
+    html += `<span class="equals">=</span>`;
+    html += displayFractionInput('final');
+    mathContent.innerHTML = html;
+  }
+}
+
+function showRectangle(){
+  visualHelp.style.display = 'block';
+  visualHelp.innerHTML = '<div class="rect-container"><div class="rect" id="rect"></div></div>';
+  const r = document.getElementById('rect');
+  let crossCount = 0;
+  for(let i = 0; i < f1.den; i++){
+    const p = document.createElement('div');
+    p.className = 'part';
+    if(op === '+' && i < f1.num) p.classList.add('blue');
+    else if(op === '+' && i >= f1.num && i < f1.num + f2.num) p.classList.add('red');
+    else if(op === '−' && i < f1.num) {
+      p.classList.add('blue');
+      if(crossCount < f2.num) {
+        p.innerHTML = '×';
+        crossCount++;
+      }
+    }
+    r.appendChild(p);
+  }
+}
+
+function rainFlowers(){
+  const emojis = ['🌸','⭐','💖','🎉'];
+  for(let i = 0; i < 20; i++){
+    setTimeout(() => {
+      const f = document.createElement('div');
+      f.className = 'flower';
+      f.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      f.style.left = Math.random()*90 + 'vw';
+      f.style.animationDuration = (Math.random()*2 + 2) + 's';
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 4000);
+    }, i * 150);
+  }
+}
+
+checkBtn.onclick = () => {
+  if(isRetryMode) return; 
+  
+  resultEl.className = 'result';
+  resultEl.style.color = '';
+  showAnswerBtn.style.display = 'none';
+  let allCorrect = true;
+  
+  if(stages[currentStage].type === 'same'){
+    const nIn = document.getElementById('ansNum');
+    const dIn = document.getElementById('ansDen');
+    const nVal = persianToEnglish(nIn.value);
+    const dVal = persianToEnglish(dIn.value);
+
+    if(nVal === correctRawNum) {
+        nIn.classList.add('correct-box'); nIn.classList.remove('wrong-box');
+    } else {
+        nIn.classList.add('wrong-box'); nIn.classList.remove('correct-box'); allCorrect = false;
+    }
+    
+    if(dVal === correctRawDen) {
+        dIn.classList.add('correct-box'); dIn.classList.remove('wrong-box');
+    } else {
+        dIn.classList.add('wrong-box'); dIn.classList.remove('correct-box'); allCorrect = false;
+    }
+    
+  } else {
+    const checkBox = (id, correctVal) => {
+        const el = document.getElementById(id);
+        const val = persianToEnglish(el.value);
+        if(val === correctVal) {
+            el.classList.add('correct-box'); el.classList.remove('wrong-box'); return true;
+        } else {
+            el.classList.add('wrong-box'); el.classList.remove('correct-box'); return false;
+        }
+    };
+
+    const c1 = checkBox('eq1Num', correctEquiv1.n);
+    const c2 = checkBox('eq1Den', correctEquiv1.d);
+    const c3 = checkBox('eq2Num', correctEquiv2.n);
+    const c4 = checkBox('eq2Den', correctEquiv2.d);
+    
+    const finalInNum = document.getElementById('finalNum');
+    const finalInDen = document.getElementById('finalDen');
+    const fnVal = persianToEnglish(finalInNum.value);
+    const fdVal = persianToEnglish(finalInDen.value);
+    
+    let finalOK = false;
+    const isRawCorrect = (fnVal === correctRawNum && fdVal === correctRawDen);
+    const sIn = simplify(fnVal, fdVal);
+    const sCor = simplify(correctRawNum, correctRawDen);
+    const isSimpCorrect = (sIn.n === sCor.n && sIn.d === sCor.d);
+    
+    if (isRawCorrect || isSimpCorrect) {
+        finalInNum.classList.add('correct-box'); finalInNum.classList.remove('wrong-box');
+        finalInDen.classList.add('correct-box'); finalInDen.classList.remove('wrong-box');
+        finalOK = true;
+    } else {
+        if(fnVal !== correctRawNum && sIn.n !== sCor.n) finalInNum.classList.add('wrong-box');
+        else finalInNum.classList.add('correct-box');
+
+        if(fdVal !== correctRawDen && sIn.d !== sCor.d) finalInDen.classList.add('wrong-box');
+        else finalInDen.classList.add('correct-box');
+        
+        if (finalInNum.classList.contains('wrong-box') || finalInDen.classList.contains('wrong-box')) finalOK = false;
+        else finalOK = true;
+    }
+
+    allCorrect = c1 && c2 && c3 && c4 && finalOK;
+  }
+  
+  if(allCorrect){
+    resultEl.innerHTML = 'آفرین! درسته ✅';
+    resultEl.className += ' correct';
+    nextBtn.disabled = false;
+    stageCompleted = true;
+    rainFlowers();
+    checkBtn.disabled = true;
+  }else{
+    resultEl.innerHTML = 'دقت کن ❌';
+    resultEl.className += ' wrong';
+    showAnswerBtn.style.display = 'inline-block';
+  }
+};
+
+function drawCurvedArrow(startId, endId, color) {
+    const startElem = document.getElementById(startId);
+    const endElem = document.getElementById(endId);
+    const container = document.getElementById('mathContent');
+    const gameArea = document.getElementById('gameArea');
+    
+    if(!startElem || !endElem || !container || !gameArea) return;
+
+    const startRect = startElem.getBoundingClientRect();
+    const endRect = endElem.getBoundingClientRect();
+    const areaRect = gameArea.getBoundingClientRect();
+    
+    const isTop = startId.includes('_n'); 
+    const x1 = startRect.left - areaRect.left + startRect.width / 2;
+    const x2 = endRect.left - areaRect.left + endRect.width / 2;
+
+    let y1, y2, controlY;
+    const curveHeight = 35; 
+
+    if(isTop) {
+        y1 = startRect.top - areaRect.top; 
+        y2 = endRect.top - areaRect.top;   
+        controlY = Math.min(y1, y2) - curveHeight; 
+    } else {
+        y1 = startRect.bottom - areaRect.top; 
+        y2 = endRect.bottom - areaRect.top;   
+        controlY = Math.max(y1, y2) + curveHeight; 
+    }
+    
+    const controlX = (x1 + x2) / 2;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const d = `M ${x1} ${y1} Q ${controlX} ${controlY} ${x2} ${y2}`;
+    
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", color);
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("marker-end", `url(#arrowhead-${color.replace('#','')})`);
+    
+    arrowLayer.appendChild(path);
+}
+
+function defineArrowMarkers() {
+    if(document.getElementById('arrow-defs')) return;
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.id = 'arrow-defs';
+    ['#2980b9', '#27ae60'].forEach(color => {
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+        marker.setAttribute("id", `arrowhead-${color.replace('#','')}`);
+        marker.setAttribute("markerWidth", "10");
+        marker.setAttribute("markerHeight", "7");
+        marker.setAttribute("refX", "9");
+        marker.setAttribute("refY", "3.5");
+        marker.setAttribute("orient", "auto");
+        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        polygon.setAttribute("points", "0 0, 10 3.5, 0 7");
+        polygon.setAttribute("fill", color);
+        marker.appendChild(polygon);
+        defs.appendChild(marker);
+    });
+    arrowLayer.appendChild(defs);
+}
+
+showAnswerBtn.onclick = () => {
+  if(isRetryMode){
+      nextQuestion();
+      return;
+  }
+
+  isRetryMode = true;
+  showAnswerBtn.textContent = 'سوال جدید';
+  showAnswerBtn.style.background = '#8e44ad'; 
+  checkBtn.disabled = true;
+  nextBtn.disabled = true;
+
+  if(stages[currentStage].type === 'same'){
+     const wrapper = document.getElementById('ans_wrapper');
+     if(wrapper) {
+         wrapper.outerHTML = displayFraction({num: correctRawNum, den: correctRawDen}, 'color-green');
+     }
+  } else {
+     let html = displayFraction(f1, '', {num:'src_f1_n', den:'src_f1_d'}, multiplier1) + 
+                `<span class="operator">${op}</span>` + 
+                displayFraction(f2, '', {num:'src_f2_n', den:'src_f2_d'}, multiplier2) + 
+                `<span class="equals">=</span>`;
+     
+     html += displayFraction({num: correctEquiv1.n, den: correctEquiv1.d}, 'color-blue', {num:'tgt_f1_n', den:'tgt_f1_d'});
+     html += `<span class="operator">${op}</span>`;
+     html += displayFraction({num: correctEquiv2.n, den: correctEquiv2.d}, 'color-green', {num:'tgt_f2_n', den:'tgt_f2_d'});
+     html += `<span class="equals">=</span>`;
+     html += displayFraction({num: correctRawNum, den: correctRawDen}, '');
+     
+     mathContent.innerHTML = html;
+
+     setTimeout(() => {
+         arrowLayer.innerHTML = ''; 
+         defineArrowMarkers();
+         drawCurvedArrow('src_f1_n', 'tgt_f1_n', '#2980b9');
+         drawCurvedArrow('src_f1_d', 'tgt_f1_d', '#2980b9');
+         drawCurvedArrow('src_f2_n', 'tgt_f2_n', '#27ae60');
+         drawCurvedArrow('src_f2_d', 'tgt_f2_d', '#27ae60');
+     }, 100);
+  }
+
+  resultEl.innerHTML = 'جواب نمایش داده شد. برای ادامه، "سوال جدید" را حل کن.';
+  resultEl.style.color = '#3498db';
+};
+
+nextBtn.onclick = () => {
+  if(!stageCompleted) return;
+  currentStage++;
+  nextQuestion();
+};
+
+async function endGame(){
+  playerData.totalGames = (Portal.isPortalMode ? Portal.previousPlays : playerData.totalGames) + 1;
+  playerData.totalStars = (Portal.isPortalMode ? Portal.previousStars : playerData.totalStars) + 1;
+  
+  clearGameState();
+  saveData();
+
+  if (Portal.isPortalMode) {
+      showScreen('portal-submitting-screen');
+      await Portal.submitProgress(1, {
+          onSuccess: (data) => {
+              playerData.totalGames = data.plays;
+              playerData.totalStars = data.stars;
+              saveData();
+              updateProfile();
+              showScreen('screen-report');
+              renderReport(data.goalReached, data.stars);
+          },
+          onFailure: (err) => {}
+      });
+  } else {
+      showScreen('screen-report');
+      renderReport(false, playerData.totalStars);
+  }
+  rainFlowers();
+}
+
+function renderReport(goalReached, currentStars) {
+    const stars = Portal.isPortalMode ? currentStars : playerData.totalStars;
+    const games = Portal.isPortalMode ? playerData.totalGames : playerData.totalGames;
+    const now = new Date();
+    const dateOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    const dateTimeStr = toPersian(now.toLocaleDateString('fa-IR', dateOptions)) + ' ' + toPersian(now.toLocaleTimeString('fa-IR', timeOptions));
+
+    document.getElementById('report-content').innerHTML = `
+        <p><strong>نام بازی:</strong> تمرین جمع و تفریق کسرها</p>
+        <p><strong>تاریخ و ساعت:</strong> <span id="reportDate">${dateTimeStr}</span></p>
+        <p><strong>نام دانش‌آموز:</strong> <span id="reportName">${playerData.name}</span></p>
+        <p><strong>تعداد بازی‌ها:</strong> <span id="reportGames">${toPersian(games)}</span></p>
+        <p><strong>تعداد ستاره‌ها:</strong> <span id="reportStars">${toPersian(stars)}</span></p>
+    `;
+
+    const goalBadge = document.getElementById('portal-goal-reached-badge');
+    const submitBadge = document.getElementById('portal-submit-badge');
+    const backInstruction = document.getElementById('portal-back-instruction');
+
+    goalBadge.style.display = 'none';
+    submitBadge.style.display = 'none';
+    backInstruction.style.display = 'none';
+
+    if (Portal.isPortalMode) {
+        document.getElementById('sendReport').style.display = 'none';
+        if (goalReached) {
+            goalBadge.style.display = 'block';
+            backInstruction.innerHTML = `
+                <div style="background:#e8f5e9; border:1px solid #2e7d32; color:#1b5e20; padding:15px; border-radius:12px; margin-top:10px; font-weight:bold; font-size:12pt; line-height:1.6; text-align:center;">
+                    📱 آفرین! تکلیف با موفقیت تکمیل شد.<br>
+                    حالا با زدن <b>دکمه بازگشت (Back) گوشی</b> به پرتال کلاس برگرد.
+                </div>
+            `;
+            backInstruction.style.display = 'block';
+        } else {
+            const remaining = Portal.requiredStars - stars;
+            submitBadge.innerHTML = `✨ آفرین دانش‌آموز زرنگم! تو <b>${toPersian(stars)}</b> ستاره از <b>${toPersian(Portal.requiredStars)}</b> ستاره‌ی این تکلیف رو گرفتی! ⭐ فقط به <b>${toPersian(remaining)}</b> ستاره‌ی دیگه نیاز داری تا تیک تکلیف بخوره. بدو برو بعدی رو حل کن! 🏆`;
+            submitBadge.style.display = 'block';
+            backInstruction.innerHTML = `
+                <div style="background:#fff3e0; border:1px solid #ffe082; color:#e65100; padding:12px; border-radius:12px; margin-top:10px; font-size:11.5pt; line-height:1.6; text-align:center;">
+                    💡 اگر می‌خواهی بعداً بازی کنی، با زدن <b>دکمه بازگشت (Back) گوشی</b> به پرتال برگرد.
+                </div>
+            `;
+            backInstruction.style.display = 'block';
+        }
+    }
+}
+
+sendReportBtn.onclick = () => {
+    sendReportBtn.textContent = 'در حال ارسال...';
+    sendReportBtn.disabled = true;
+
+    const now = new Date();
+    const dateOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+    const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    const dateTimeStr = toPersian(now.toLocaleDateString('fa-IR', dateOptions)) + ' ' + toPersian(now.toLocaleTimeString('fa-IR', timeOptions));
+    
+    const text = `سلام آقای معلم 🌸\nمن ${playerData.name} هستم.\nگزارش بازی جمع و تفریق کسرها:\nمدرسه: ${schoolName}\nتعداد کل بازی‌ها: ${toPersian(playerData.totalGames)}\nتعداد ستاره‌های من: ${toPersian(playerData.totalStars)}\nتاریخ: ${dateTimeStr}`;
+    const waLink = `whatsapp://send?phone=${teacherPhone.replace('+','')}&text=${encodeURIComponent(text)}`;
+    
+    setTimeout(() => {
+        window.location.href = waLink;
+        playerData.reportSent = true;
+        saveData();
+        sendReportBtn.textContent = 'ارسال شد ✅';
+        sendReportBtn.style.background = '#95a5a6';
+    }, 500);
+};
+
+document.getElementById('playAgain').onclick = () => {
+  currentStage = 0; 
+  playerData.reportSent = false; 
+  saveGameState();
+  saveData();
+  showScreen('screen-game');
+  startNewGame();
+};
+
+window.submitAssistantStar = async function() {
+    showScreen('portal-submitting-screen');
+    await Portal.submitProgress(null, {
+        onSuccess: (data) => {
+            authenticatePortalStudent();
+        },
+        onFailure: (err) => {}
+    });
+};
+
+window.retryAuthentication = function() {
+    authenticatePortalStudent();
+};
+
+window.retrySubmission = function() {
+    document.getElementById('portal-submit-status-text').style.color = '#555';
+    document.getElementById('portal-progress-bar').style.backgroundColor = '#7b1fa2';
+    Portal.submitProgress(null, Portal._lastSubmitCallbacks);
+};
+
+async function authenticatePortalStudent() {
+    await Portal.authenticate({
+        onSuccess: (data) => {
+            document.getElementById('portal-welcome-section').style.display = '';
+            document.getElementById('startGame').style.display = '';
+            document.getElementById('portal-error-section').style.display = 'none';
+
+            STORAGE = `studentProfile_Kasr_${Portal.studentId}_${Portal.homeworkId}`;
+            GAME_STATE_STORAGE = `gameState_Kasr_${Portal.studentId}_${Portal.homeworkId}`;
+            
+            const saved = localStorage.getItem(STORAGE);
+            if (saved) {
+                try {
+                    playerData = JSON.parse(saved);
+                } catch (e) {}
+            } else {
+                playerData = {
+                    name: data.name,
+                    totalGames: data.plays,
+                    totalStars: data.stars,
+                    reportSent: false
+                };
+            }
+            
+            playerData.name = data.name || Portal.studentName || playerData.name || "دانش‌آموز";
+            playerData.totalGames = data.plays !== undefined ? data.plays : playerData.totalGames;
+            playerData.totalStars = data.stars !== undefined ? data.stars : playerData.totalStars;
+            
+            saveData();
+            updateProfile();
+
+            document.getElementById('portal-student-name').textContent = playerData.name;
+            document.getElementById('portal-prev-plays').textContent = toPersian(playerData.totalGames);
+            document.getElementById('portal-prev-stars').textContent = toPersian(playerData.totalStars) + ' ⭐';
+            document.getElementById('portal-req-stars').textContent = toPersian(Portal.requiredStars) + ' ⭐';
+
+            const activeState = checkSavedUnfinishedState();
+            const startBtn = document.getElementById('startGame');
+            if (activeState) {
+                startBtn.textContent = 'ادامه بازی (باقیمانده) 🔄';
+                startBtn.style.backgroundColor = '#ff9800';
+            } else {
+                startBtn.textContent = 'شروع بازی تکلیف 🎮';
+                startBtn.style.backgroundColor = '#e67e22';
+            }
+
+            const needsSubmitKey = `portal_needs_submit_${Portal.gameId}_${Portal.studentId}_${Portal.homeworkId}`;
+            const hasUnsentStar = localStorage.getItem(needsSubmitKey) === 'true';
+
+            if (hasUnsentStar) {
+                document.getElementById('ast-welcome').textContent = `سلام ${playerData.name} عزیز! 🌟`;
+                document.getElementById('ast-name').textContent = playerData.name;
+                document.getElementById('ast-stars').textContent = toPersian(playerData.totalStars) + ' ⭐';
+                document.getElementById('ast-req-stars').textContent = toPersian(Portal.requiredStars) + ' ⭐';
+                showScreen('screen-assistant');
+            } else if (currentStage >= totalQuestions) {
+                showScreen('screen-report');
+                renderReport(playerData.totalStars >= Portal.requiredStars, playerData.totalStars);
+            } else if (activeState) {
+                showScreen('screen-game');
+                loadState();
+                startNewGame();
+            } else {
+                showScreen('screen-register');
+            }
+        },
+        onFailure: (err) => {
+            showScreen('screen-register');
+            document.getElementById('portal-welcome-section').style.display = 'none';
+            document.getElementById('startGame').style.display = 'none';
+            document.getElementById('portal-error-section').style.display = 'block';
+        },
+        onGuestMode: () => {
+            showScreen('screen-register');
+            document.getElementById('portal-welcome-section').style.display = 'none';
+            document.getElementById('startGame').style.display = 'none';
+            document.getElementById('portal-error-title').textContent = 'لینک ورود نامعتبر است';
+            document.getElementById('portal-error-desc').textContent = 'جهت انجام این تکلیف، حتماً باید از طریق پنل مدرسه و با لینک اختصاصی خود وارد شوی.';
+            document.getElementById('portal-retry-auth-btn').style.display = 'none';
+            document.getElementById('portal-error-section').style.display = 'block';
+        }
+    });
+}
+
+window.addEventListener('beforeunload', saveData);
+loadData();
+authenticatePortalStudent();
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            window.location.reload();
+            refreshing = true;
+        }
+    });
+}
+</script>
+</body>
+</html>
