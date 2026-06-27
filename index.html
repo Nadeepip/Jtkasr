@@ -1048,20 +1048,22 @@ async function authenticatePortalStudent() {
     });
 }
 
-window.addEventListener('beforeunload', saveData);
-loadData();
-authenticatePortalStudent();
+document.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('beforeunload', saveData);
+    loadData();
+    authenticatePortalStudent();
 
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-            window.location.reload();
-            refreshing = true;
-        }
-    });
-}
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                window.location.reload();
+                refreshing = true;
+            }
+        });
+    }
+});
 </script>
 </body>
 </html>
