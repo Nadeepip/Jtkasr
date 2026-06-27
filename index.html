@@ -304,7 +304,7 @@
         <div id="portal-progress-bar" style="background:linear-gradient(90deg, #ff007f, #aa00ff, #00b0ff); width:0%; height:100%; transition:width 0.2s;"></div>
     </div>
     <p id="portal-submit-status-text" style="font-size:12pt; color:#555; font-weight:bold; line-height:1.6; direction:rtl;"></p>
-    <button id="portal-retry-submit-btn" style="display:none; margin:15px auto 0; background:#e74c3c; color: white; padding: 10px 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;" onclick="retrySubmission()">🔄 تلاش مجدد برای ارسال</button>
+    <button id="portal-retry-submit-btn" class="btn-start" style="display:none; margin:15px auto 0; background:#e74c3c; color: white; padding: 10px 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;" onclick="retrySubmission()">🔄 تلاش مجدد برای ارسال</button>
   </div>
 </div>
 
@@ -450,7 +450,6 @@ function loadData(){
 
 function saveData(){
     localStorage.setItem(STORAGE, JSON.stringify(playerData));
-    saveGameState();
 }
 
 function saveGameState() {
