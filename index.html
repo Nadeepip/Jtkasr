@@ -499,7 +499,6 @@ startGameBtn.onclick = () => {
       loadState();
   } else {
       currentStage = 0;
-      saveGameState();
   }
   saveData();
   showScreen('screen-game');
@@ -599,6 +598,7 @@ function nextQuestion(){
     html += displayFractionInput('final');
     mathContent.innerHTML = html;
   }
+  saveGameState();
 }
 
 function showRectangle(){
@@ -827,13 +827,14 @@ showAnswerBtn.onclick = () => {
      }, 100);
   }
 
-  resultEl.innerHTML = 'جواب نمایش داده شد. برای ادامه، "سوال جدید" را حل کن.';
+  resultEl.innerHTML = 'جواب نمایش داده شد. برای ادامه, "سوال جدید" را حل کن.';
   resultEl.style.color = '#3498db';
 };
 
 nextBtn.onclick = () => {
   if(!stageCompleted) return;
   currentStage++;
+  saveGameState();
   nextQuestion();
 };
 
